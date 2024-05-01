@@ -134,7 +134,7 @@ func upsertFile(name string, content []byte) {
 }
 
 func main() {
-	commands := []string{"logread", "dmesg", "uptime"}
+	commands := []string{"logread", "dmesg", "uptime", "qmicli -p -d /dev/cdc-wdm0 --nas-get-signal-strength", "qmicli -p -d /dev/cdc-wdm0 --nas-get-serving-system"}
 	hosts := []string{"172.16.0.11", "172.16.0.51"}
 
 	const port = ":22"
@@ -143,11 +143,13 @@ func main() {
 	for _, h := range hosts {
 		logStringAsBytes := []byte(fmt.Sprintf("Captured: %s\n", time.Now()))
 		upsertFile(h, logStringAsBytes)
+
+		conn, err := Connect(h+port, "root", "")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer conn.Close()
 		for _, c := range commands {
-			conn, err := Connect(h+port, "root", "")
-			if err != nil {
-				log.Fatal(err)
-			}
 			output, err := conn.SendCommands(c)
 			check(err)
 			upsertFile(h, output) // write the log output
